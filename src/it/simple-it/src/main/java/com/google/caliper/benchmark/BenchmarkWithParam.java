@@ -1,9 +1,8 @@
 package com.google.caliper.benchmark;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import com.google.caliper.Benchmark;
 import com.google.caliper.Param;
@@ -12,30 +11,40 @@ import com.google.caliper.Param;
  * @author Anton Tychyna
  */
 public class BenchmarkWithParam extends Benchmark {
+	private static Set<Integer> result = new LinkedHashSet<Integer>();
+
 	@Param
 	private int length;
 
-	public long timeBenchmark(long reps) {
-		long c = 0;
-		for (long i = 0; i < reps; i++) {
-			c += i;
+	public int timeBenchmark(int reps) {
+		int c = 0;
+		for (int i = 0; i < reps; i++) {
+			for (int j = 0; j < 10000; j++) {
+				c = (j * 5 + 7) % 1000;
+			}
 		}
-		writeResultToFile(c);
+		result.add(length);
 		return c;
 	}
 
-	private void writeResultToFile(long c) {
-		File f = new File("/tmp/result");
-		PrintWriter s = null;
-		try {
-			s = new PrintWriter(new FileOutputStream(f));
-			s.write(Long.toString(c));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		} finally {
-			if (s != null) {
-				s.close();
+	@Override
+	protected void tearDown() throws Exception {
+		writeResultToFile();
+	}
+
+	private void writeResultToFile() {
+		Utils.writeToFile("BenchmarkWithParam", new Utils.WriteCallback() {
+			@Override
+			public void write(PrintWriter w) {
+				boolean first = true;
+				for (Integer i : result) {
+					if (!first) {
+						w.print(",");
+					}
+					w.print(i);
+					first = false;
+				}
 			}
-		}
+		});
 	}
 }

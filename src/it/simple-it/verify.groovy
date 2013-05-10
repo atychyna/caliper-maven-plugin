@@ -1,4 +1,12 @@
-File result = new File("/tmp/result");
+def tmpdir = System.getProperty("java.io.tmpdir")
 
-assert result.isFile()
-assert result.text.toLong() > 0
+File paramBenchmark = new File("$tmpdir/BenchmarkWithParam")
+paramBenchmark.deleteOnExit()
+File testBenchmark = new File("$tmpdir/TestBenchmark")
+testBenchmark.deleteOnExit()
+
+assert paramBenchmark.isFile()
+assert paramBenchmark.text == "1,2,3"
+
+assert testBenchmark.isFile()
+assert testBenchmark.text == "success"

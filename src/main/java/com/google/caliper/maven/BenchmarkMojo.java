@@ -23,14 +23,12 @@ import org.apache.maven.project.MavenProject;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
 /**
  * Run Caliper benchmarks.
  */
-@Mojo(name = "run", defaultPhase = LifecyclePhase.TEST, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
-// @Mojo(name = "run", defaultPhase = LifecyclePhase.TEST)
+@Mojo(name = "run", defaultPhase = LifecyclePhase.VERIFY, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class BenchmarkMojo extends AbstractMojo {
 	public static final Joiner JOINER = Joiner.on(',');
 	public static final String CALIPER_GROUP_ID = "com.google.caliper";
@@ -47,6 +45,9 @@ public class BenchmarkMojo extends AbstractMojo {
 
 	@Parameter
 	protected boolean dryRun;
+
+	@Parameter
+	protected boolean failBuild;
 
 	@Parameter
 	protected Integer trials;
@@ -124,8 +125,14 @@ public class BenchmarkMojo extends AbstractMojo {
 				benchmark.run(commandLineOptions);
 				result.successes++;
 			} catch (Exception e) {
-				getLog().warn("Exception was thrown while running " + benchmark, e);
-				result.failures++;
+				String exception = "Exception was thrown while running " + benchmark;
+				if (failBuild) {
+					getLog().error(exception, e);
+					throw new MojoFailureException(exception);
+				} else {
+					getLog().warn(exception, e);
+					result.failures++;
+				}
 			}
 		}
 		console.info("");
@@ -192,9 +199,9 @@ public class BenchmarkMojo extends AbstractMojo {
 	}
 
 	private URL getPathToPluginJar() throws IOException {
-		URL url = getClass().getResource("CaliperBenchmark.class");
+		URL url = getClass().getResource(getClass().getSimpleName() + ".class");
 		if (!"jar".equalsIgnoreCase(url.getProtocol()))
-			throw new IllegalArgumentException("caliper-maven-plugin is not a jar file");
+			throw new IllegalArgumentException("caliper-maven-plugin classes are not in a jar file");
 		JarURLConnection connection = (JarURLConnection) url.openConnection();
 		return connection.getJarFileURL();
 	}
@@ -246,11 +253,5 @@ public class BenchmarkMojo extends AbstractMojo {
 
 	private static MojoExecutionException bug(Exception e) throws MojoExecutionException {
 		return new MojoExecutionException("Please report this problem to caliper-maven-plugin bug tracker", e);
-	}
-
-	public static void main(String[] args) {
-		Map<String, String> m = ImmutableMap.of("a", "b", "c", "d");
-		Joiner.MapJoiner j = Joiner.on(" ").withKeyValueSeparator("=");
-		System.out.println(j.join(m));
 	}
 }

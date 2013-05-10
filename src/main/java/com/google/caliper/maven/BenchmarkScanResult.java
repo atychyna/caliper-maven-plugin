@@ -26,7 +26,9 @@ public class BenchmarkScanResult {
 	public List<CaliperBenchmark> toBenchmarks(ClassLoader loader) throws ClassNotFoundException {
 		List<CaliperBenchmark> result = Lists.newArrayList();
 		for (String f : files) {
-			result.add(new CaliperBenchmark(loader, f));
+			if (!f.contains("$")) {
+				result.add(new CaliperBenchmark(loader, f));
+			}
 		}
 		return result;
 	}

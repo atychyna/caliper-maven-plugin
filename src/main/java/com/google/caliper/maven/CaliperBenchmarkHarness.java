@@ -10,7 +10,13 @@ import com.google.caliper.util.InvalidCommandException;
 import com.google.common.collect.ObjectArrays;
 
 /**
+ * Wrapper around actual benchmark. This class is loaded using custom {@link BenchmarkClassLoader} which
+ * contains library dependencies (including Caliper) as Maven doesn't include libraries and project
+ * tests/classes in plugin classloader classpath.
+ * 
  * @author Anton Tychyna
+ * @see BenchmarkClassLoader
+ * @see CaliperBenchmark
  */
 public class CaliperBenchmarkHarness {
 	public static final String BENCHMARK_CLASS_NAME = "com.google.caliper.Benchmark";

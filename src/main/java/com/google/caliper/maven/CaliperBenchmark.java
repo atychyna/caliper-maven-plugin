@@ -5,6 +5,8 @@ import static com.google.caliper.maven.ClassLoaderUtils.loadClass;
 import org.apache.commons.lang3.reflect.MethodUtils;
 
 /**
+ * Wrapper around {@link CaliperBenchmarkHarness}.
+ * 
  * @author Anton Tychyna
  */
 public class CaliperBenchmark {
