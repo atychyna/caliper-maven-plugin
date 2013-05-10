@@ -30,9 +30,9 @@ import com.google.common.collect.Lists;
  */
 @Mojo(name = "run", defaultPhase = LifecyclePhase.VERIFY, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class BenchmarkMojo extends AbstractMojo {
-	public static final Joiner JOINER = Joiner.on(',');
-	public static final String CALIPER_GROUP_ID = "com.google.caliper";
-	public static final String CALIPER_ARTIFACT_ID = "caliper";
+	private static final Joiner JOINER = Joiner.on(',');
+	private static final String CALIPER_GROUP_ID = "com.google.caliper";
+	private static final String CALIPER_ARTIFACT_ID = "caliper";
 
 	@Parameter(defaultValue = "${project}", required = true, readonly = true)
 	private MavenProject project;

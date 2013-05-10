@@ -2,26 +2,26 @@ package com.google.caliper.maven;
 
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.List;
+
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 
 /**
  * @author Anton Tychyna
  */
 public class ClassLoaderUtils {
+	private static final String PATH_SEPARATOR = System.getProperty("path.separator");
+	private static final Joiner JOINER = Joiner.on(PATH_SEPARATOR);
 
 	public static String getClassPathString(ClassLoader classLoader) {
 		if (classLoader instanceof URLClassLoader) {
 			URLClassLoader loader = (URLClassLoader) classLoader;
-			StringBuilder result = new StringBuilder();
-			boolean first = true;
+			List<String> elements = Lists.newArrayList();
 			for (URL url : loader.getURLs()) {
-				if (!first) {
-					result.append(":");
-				} else {
-					first = false;
-				}
-				result.append(url.getFile());
+				elements.add(url.getFile());
 			}
-			return result.toString();
+			return JOINER.join(elements);
 		}
 		return "";
 	}
