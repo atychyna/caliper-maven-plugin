@@ -19,8 +19,8 @@ public class BenchmarkWithParam extends Benchmark {
 	public int timeBenchmark(int reps) {
 		int c = 0;
 		for (int i = 0; i < reps; i++) {
-			for (int j = 0; j < 10000; j++) {
-				c = (j * 5 + 7) % 1000;
+			for (int j = 0; j < 1000; j++) {
+				c += (j * 5 + 7) % 1000;
 			}
 		}
 		result.add(length);

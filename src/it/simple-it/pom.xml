@@ -22,15 +22,13 @@
 				<executions>
 					<execution>
 						<id>run</id>
-						<!--<phase>validate</phase>-->
 						<goals>
 							<goal>run</goal>
 						</goals>
 						<configuration>
-							<!--<printConfig>true</printConfig>-->
-							<dryRun>true</dryRun>
+							<runName>Benchmark with params defined in pom.xml</runName>
 							<params>
-								<length>1,2,3</length>
+								<length>1,2</length>
 							</params>
 							<excludes>
 								<exclude>**/Test*</exclude>
@@ -39,13 +37,11 @@
 					</execution>
 					<execution>
 						<id>run2</id>
-						<!--<phase>validate</phase>-->
 						<goals>
 							<goal>run</goal>
 						</goals>
 						<configuration>
-							<!--<printConfig>true</printConfig>-->
-							<!--<dryRun>true</dryRun>-->
+							<runName>Run couple of simple benchmarks</runName>
 							<excludes>
 								<exclude>**/*Param*</exclude>
 							</excludes>

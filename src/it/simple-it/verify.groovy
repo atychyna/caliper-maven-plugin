@@ -6,7 +6,7 @@ File testBenchmark = new File("$tmpdir/TestBenchmark")
 testBenchmark.deleteOnExit()
 
 assert paramBenchmark.isFile()
-assert paramBenchmark.text == "1,2,3"
+assert paramBenchmark.text == "1,2"
 
 assert testBenchmark.isFile()
 assert testBenchmark.text == "success"

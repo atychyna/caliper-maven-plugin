@@ -53,7 +53,7 @@ public class BenchmarkMojo extends AbstractMojo {
 	protected Integer trials;
 
 	@Parameter
-	protected String instrument;
+	protected List<String> instruments;
 
 	@Parameter
 	protected String runName;
@@ -209,31 +209,31 @@ public class BenchmarkMojo extends AbstractMojo {
 	protected String[] getCommandLineOptions() {
 		List<String> options = Lists.newArrayList();
 		if (timeLimit != null) {
-			options.add("-l " + timeLimit);
+			options.add("-l" + timeLimit);
 		}
 		if (dryRun) {
 			options.add("-n");
 		}
 		if (trials != null) {
-			options.add("-t " + trials);
+			options.add("-t" + trials);
 		}
 		if (caliperConfigFile != null) {
-			options.add("-c " + caliperConfigFile);
+			options.add("-c" + caliperConfigFile);
 		}
 		if (caliperDirectory != null) {
-			options.add("--directory " + caliperDirectory);
+			options.add("--directory" + caliperDirectory);
 		}
 		if (printConfig) {
 			options.add("-p");
 		}
 		if (vms != null) {
-			options.add("-m " + JOINER.join(vms));
+			options.add("-m" + JOINER.join(vms));
 		}
-		if (instrument != null) {
-			options.add("-i " + instrument);
+		if (instruments != null) {
+			options.add("-i" + JOINER.join(instruments));
 		}
 		if (runName != null) {
-			options.add("-r " + runName);
+			options.add("-r" + runName);
 		}
 		if (verbose) {
 			options.add("-v");
