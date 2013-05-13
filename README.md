@@ -122,6 +122,11 @@ Location of Caliper's configuration and data directory.
 
 Print the effective configuration that will be used by Caliper.
 
+#### allocationAgentJar
+* type: *String*
+
+Java agent for allocation instrument. Plugin will look for agent on a classpath if not defined.
+
 #### vms
 * type: *List&lt;String&gt;*
 * default: *Caliper's default*

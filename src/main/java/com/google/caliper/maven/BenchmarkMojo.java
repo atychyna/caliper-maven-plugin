@@ -101,7 +101,8 @@ public class BenchmarkMojo extends AbstractMojo {
 	@Parameter(property = "benchmark")
 	protected String benchmark;
 
-	private File allocationJar;
+	@Parameter(property = "allocationAgentJar")
+	private String allocationAgentJar;
 
 	protected List<String> getDefaultIncludes() {
 		return Lists.newArrayList("**/*Benchmark.java", "**/Benchmark*.java");
@@ -157,18 +158,28 @@ public class BenchmarkMojo extends AbstractMojo {
 	}
 
 	private void checkCaliperDependency() throws MojoExecutionException {
+		// check Caliper library is available
 		Optional caliper = Iterables.tryFind(project.getArtifacts(), CALIPER_PREDICATE);
 		if (!caliper.isPresent()) {
 			throw dependencyNotFound(CALIPER_GROUP_ID, CALIPER_ARTIFACT_ID);
 		}
 		getLog().debug("Using Caliper library " + caliper.get());
-		Optional allocation = Iterables.tryFind(project.getArtifacts(), ALLOCATION_PREDICATE);
-		if (!allocation.isPresent()) {
-			throw dependencyNotFound(ALLOCATION_GROUP_ID, ALLOCATION_ARTIFACT_ID);
+
+		// get java agent for allocation instrument, Caliper won't run without it
+		if (isNullOrEmpty(allocationAgentJar)) {
+			Optional allocation = Iterables.tryFind(project.getArtifacts(), ALLOCATION_PREDICATE);
+			if (!allocation.isPresent()) {
+				throw dependencyNotFound(ALLOCATION_GROUP_ID, ALLOCATION_ARTIFACT_ID);
+			}
+			Artifact a = (Artifact) allocation.get();
+			allocationAgentJar = a.getFile().getAbsolutePath();
 		}
-		getLog().debug("Using allocation library " + allocation.get());
-		Artifact a = (Artifact) allocation.get();
-		allocationJar = a.getFile();
+		File agentJar = new File(allocationAgentJar);
+		if (!agentJar.isFile() || !agentJar.canRead()) {
+			throw new IllegalArgumentException("Can't read agent jar " + allocationAgentJar
+					+ " (check file exists and its permissions)");
+		}
+		getLog().debug("Using allocation library " + allocationAgentJar);
 	}
 
 	protected List<CaliperBenchmark> getBenchmarks(ClassLoader benchmarkClassloader)
@@ -258,7 +269,7 @@ public class BenchmarkMojo extends AbstractMojo {
 				options.add("-C" + e.getKey() + "=" + e.getValue());
 			}
 		}
-		options.add("-Cinstrument.allocation.options.allocationAgentJar=" + allocationJar.getAbsolutePath());
+		options.add("-Cinstrument.allocation.options.allocationAgentJar=" + allocationAgentJar);
 		if (params != null && !params.isEmpty()) {
 			for (Map.Entry<String, String> e : params.entrySet()) {
 				options.add("-D" + e.getKey() + "=" + e.getValue());
