@@ -1,5 +1,13 @@
 # Installing
 
+Checkout source code.
+
+    git clone git://github.com/atychyna/caliper-maven-plugin.git
+
+Install it.
+
+    mvn clean install
+
 Add following XML to your *$HOME/.m2/settings.xml* if you want to be able to use shortened commands like `mvn caliper:run`.
 
 ```xml
@@ -12,7 +20,7 @@ Add following XML to your *$HOME/.m2/settings.xml* if you want to be able to use
 
 You need to have Caliper declared as a dependency in runtime or compile scope of your project (plugin's dependencyResolution = **COMPILE_PLUS_RUNTIME**).
 
-To run single benchmark use `mvn -Dbenchmark=**/SpecificBenchmark* caliper:run`
+To run single benchmark use `mvn -Dbenchmark=**/SpecificBenchmark* compile caliper:run`
 
 You can also run your benchmarks as a part of a build. By default plugin binds to **VERIFY** lifecycle phase.
 
@@ -40,6 +48,8 @@ You can also run your benchmarks as a part of a build. By default plugin binds t
 ```
 
 ## Configurations options
+
+All configuration options (except [properties](#properties) and [params](#params)) have command line counterparts in form of `mvn -D<name>=<value>` for strings and `mvn -D<name>` for booleans.
 
 #### benchmarkClassesDirectory
 * type: *String*

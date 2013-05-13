@@ -1,5 +1,7 @@
 package com.google.caliper.maven;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.JarURLConnection;
@@ -9,6 +11,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import javax.annotation.Nullable;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
@@ -22,7 +26,10 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -33,6 +40,12 @@ public class BenchmarkMojo extends AbstractMojo {
 	private static final Joiner JOINER = Joiner.on(',');
 	private static final String CALIPER_GROUP_ID = "com.google.caliper";
 	private static final String CALIPER_ARTIFACT_ID = "caliper";
+	private static final String ALLOCATION_GROUP_ID = "com.google.code.java-allocation-instrumenter";
+	private static final String ALLOCATION_ARTIFACT_ID = "java-allocation-instrumenter";
+	private static Predicate<Object> CALIPER_PREDICATE = artifactPredicate(CALIPER_GROUP_ID,
+			CALIPER_ARTIFACT_ID);
+	private static Predicate<Object> ALLOCATION_PREDICATE = artifactPredicate(ALLOCATION_GROUP_ID,
+			ALLOCATION_ARTIFACT_ID);
 
 	@Parameter(defaultValue = "${project}", required = true, readonly = true)
 	private MavenProject project;
@@ -40,37 +53,37 @@ public class BenchmarkMojo extends AbstractMojo {
 	@Parameter(defaultValue = "${project.build.outputDirectory}")
 	protected File benchmarkClassesDirectory;
 
-	@Parameter
+	@Parameter(property = "timeLimit")
 	protected String timeLimit;
 
-	@Parameter
+	@Parameter(property = "dryRun")
 	protected boolean dryRun;
 
-	@Parameter
+	@Parameter(property = "failBuild")
 	protected boolean failBuild;
 
-	@Parameter
+	@Parameter(property = "trials")
 	protected Integer trials;
 
-	@Parameter
+	@Parameter(property = "instruments")
 	protected List<String> instruments;
 
-	@Parameter
+	@Parameter(property = "runName")
 	protected String runName;
 
-	@Parameter
+	@Parameter(property = "verbose")
 	protected boolean verbose;
 
-	@Parameter
+	@Parameter(property = "caliperConfigFile")
 	protected String caliperConfigFile;
 
-	@Parameter
+	@Parameter(property = "caliperDirectory")
 	protected String caliperDirectory;
 
-	@Parameter
+	@Parameter(property = "printConfig")
 	protected boolean printConfig;
 
-	@Parameter
+	@Parameter(property = "vms")
 	protected List<String> vms;
 
 	@Parameter
@@ -79,14 +92,16 @@ public class BenchmarkMojo extends AbstractMojo {
 	@Parameter
 	protected Map<String, String> params;
 
-	@Parameter
+	@Parameter(property = "includes")
 	protected List<String> includes;
 
-	@Parameter
+	@Parameter(property = "excludes")
 	protected List<String> excludes;
 
 	@Parameter(property = "benchmark")
 	protected String benchmark;
+
+	private File allocationJar;
 
 	protected List<String> getDefaultIncludes() {
 		return Lists.newArrayList("**/*Benchmark.java", "**/Benchmark*.java");
@@ -142,18 +157,18 @@ public class BenchmarkMojo extends AbstractMojo {
 	}
 
 	private void checkCaliperDependency() throws MojoExecutionException {
-		for (Object o : project.getArtifacts()) {
-			Artifact a = (Artifact) o;
-			if ((Artifact.SCOPE_COMPILE.equals(a.getScope()) || Artifact.SCOPE_RUNTIME.equals(a.getScope()))
-					&& a.getGroupId().equals(CALIPER_GROUP_ID)
-					&& a.getArtifactId().equals(CALIPER_ARTIFACT_ID)) {
-				getLog().debug("Using Caliper library " + a);
-				return;
-			}
+		Optional caliper = Iterables.tryFind(project.getArtifacts(), CALIPER_PREDICATE);
+		if (!caliper.isPresent()) {
+			throw dependencyNotFound(CALIPER_GROUP_ID, CALIPER_ARTIFACT_ID);
 		}
-		throw new MojoExecutionException(CALIPER_GROUP_ID + ":" + CALIPER_ARTIFACT_ID
-				+ " dependency was not found in project \"" + project.getName()
-				+ "\" in compile or runtime scopes");
+		getLog().debug("Using Caliper library " + caliper.get());
+		Optional allocation = Iterables.tryFind(project.getArtifacts(), ALLOCATION_PREDICATE);
+		if (!allocation.isPresent()) {
+			throw dependencyNotFound(ALLOCATION_GROUP_ID, ALLOCATION_ARTIFACT_ID);
+		}
+		getLog().debug("Using allocation library " + allocation.get());
+		Artifact a = (Artifact) allocation.get();
+		allocationJar = a.getFile();
 	}
 
 	protected List<CaliperBenchmark> getBenchmarks(ClassLoader benchmarkClassloader)
@@ -208,7 +223,7 @@ public class BenchmarkMojo extends AbstractMojo {
 
 	protected String[] getCommandLineOptions() {
 		List<String> options = Lists.newArrayList();
-		if (timeLimit != null) {
+		if (!isNullOrEmpty(timeLimit)) {
 			options.add("-l" + timeLimit);
 		}
 		if (dryRun) {
@@ -217,33 +232,34 @@ public class BenchmarkMojo extends AbstractMojo {
 		if (trials != null) {
 			options.add("-t" + trials);
 		}
-		if (caliperConfigFile != null) {
+		if (!isNullOrEmpty(caliperConfigFile)) {
 			options.add("-c" + caliperConfigFile);
 		}
-		if (caliperDirectory != null) {
+		if (!isNullOrEmpty(caliperDirectory)) {
 			options.add("--directory" + caliperDirectory);
 		}
 		if (printConfig) {
 			options.add("-p");
 		}
-		if (vms != null) {
+		if (vms != null && !vms.isEmpty()) {
 			options.add("-m" + JOINER.join(vms));
 		}
-		if (instruments != null) {
+		if (instruments != null && !instruments.isEmpty()) {
 			options.add("-i" + JOINER.join(instruments));
 		}
-		if (runName != null) {
+		if (!isNullOrEmpty(runName)) {
 			options.add("-r" + runName);
 		}
 		if (verbose) {
 			options.add("-v");
 		}
-		if (properties != null) {
+		if (properties != null && !properties.isEmpty()) {
 			for (Map.Entry<String, String> e : properties.entrySet()) {
 				options.add("-C" + e.getKey() + "=" + e.getValue());
 			}
 		}
-		if (params != null) {
+		options.add("-Cinstrument.allocation.options.allocationAgentJar=" + allocationJar.getAbsolutePath());
+		if (params != null && !params.isEmpty()) {
 			for (Map.Entry<String, String> e : params.entrySet()) {
 				options.add("-D" + e.getKey() + "=" + e.getValue());
 			}
@@ -251,7 +267,32 @@ public class BenchmarkMojo extends AbstractMojo {
 		return options.toArray(new String[options.size()]);
 	}
 
+	private static Predicate<Object> artifactPredicate(final String groupId, final String artifactId) {
+		return new Predicate<Object>() {
+			@Override
+			public boolean apply(@Nullable Object o) {
+				if (o instanceof Artifact) {
+					Artifact a = (Artifact) o;
+					if ((Artifact.SCOPE_COMPILE.equals(a.getScope()) || Artifact.SCOPE_RUNTIME.equals(a
+							.getScope()))
+							&& a.getGroupId().equals(groupId)
+							&& a.getArtifactId().equals(artifactId)) {
+						return true;
+					}
+				}
+				return false;
+			}
+		};
+	}
+
 	private static MojoExecutionException bug(Exception e) throws MojoExecutionException {
 		return new MojoExecutionException("Please report this problem to caliper-maven-plugin bug tracker", e);
+	}
+
+	private MojoExecutionException dependencyNotFound(String groupId, String artifactId)
+			throws MojoExecutionException {
+		throw new MojoExecutionException(groupId + ":" + artifactId
+				+ " dependency was not found in project \"" + project.getName()
+				+ "\" in compile or runtime scopes");
 	}
 }
