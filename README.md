@@ -20,7 +20,13 @@ Add following XML to your *$HOME/.m2/settings.xml* if you want to be able to use
 
 You need to have Caliper declared as a dependency in runtime or compile scope of your project (plugin's dependencyResolution = **COMPILE_PLUS_RUNTIME**).
 
-To run single benchmark use `mvn -Dbenchmark=**/SpecificBenchmark* compile caliper:run`
+To run all benchmarks (all classes that begin or end with *Benchmark*).
+
+    mvn compile caliper:run
+
+To run single benchmark.
+
+    mvn -Dbenchmark=**/SpecificBenchmark* compile caliper:run
 
 You can also run your benchmarks as a part of a build. By default plugin binds to **VERIFY** lifecycle phase.
 
