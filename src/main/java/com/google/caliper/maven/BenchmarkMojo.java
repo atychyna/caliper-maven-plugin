@@ -11,6 +11,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 
 import javax.annotation.Nullable;
 
@@ -40,12 +42,52 @@ public class BenchmarkMojo extends AbstractMojo {
 	private static final Joiner JOINER = Joiner.on(',');
 	private static final String CALIPER_GROUP_ID = "com.google.caliper";
 	private static final String CALIPER_ARTIFACT_ID = "caliper";
-	private static final String ALLOCATION_GROUP_ID = "com.google.code.java-allocation-instrumenter";
-	private static final String ALLOCATION_ARTIFACT_ID = "java-allocation-instrumenter";
-	private static Predicate<Object> CALIPER_PREDICATE = artifactPredicate(CALIPER_GROUP_ID,
-			CALIPER_ARTIFACT_ID);
-	private static Predicate<Object> ALLOCATION_PREDICATE = artifactPredicate(ALLOCATION_GROUP_ID,
-			ALLOCATION_ARTIFACT_ID);
+	private static final String ALLOCATION_INSTRUMENTER_CLASSNAME = "com.google.monitoring.runtime.instrumentation.AllocationInstrumenter";
+	private static Predicate<Object> CALIPER_PREDICATE = new Predicate<Object>() {
+		@Override
+		public boolean apply(@Nullable Object o) {
+			if (o instanceof Artifact) {
+				Artifact a = (Artifact) o;
+				if ((Artifact.SCOPE_COMPILE.equals(a.getScope()) || Artifact.SCOPE_RUNTIME.equals(a
+						.getScope()))
+						&& a.getGroupId().equals(CALIPER_GROUP_ID)
+						&& a.getArtifactId().equals(CALIPER_ARTIFACT_ID)) {
+					return true;
+				}
+			}
+			return false;
+		}
+	};
+	private static Predicate<Object> ALLOCATION_PREDICATE = new Predicate<Object>() {
+		@Override
+		public boolean apply(@Nullable Object o) {
+			if (o instanceof Artifact) {
+				Artifact a = (Artifact) o;
+				if ("jar".equals(a.getType())) {
+					try {
+						JarFile jarFile = null;
+						try {
+							jarFile = new JarFile(a.getFile());
+							Manifest manifest = jarFile.getManifest();
+							if ((manifest != null)
+									&& ALLOCATION_INSTRUMENTER_CLASSNAME.equals(manifest.getMainAttributes()
+											.getValue("Premain-Class"))) {
+								return true;
+							}
+						} finally {
+							if (jarFile != null) {
+								jarFile.close();
+							}
+						}
+					} catch (IOException e) {
+						// do nothing
+					}
+
+				}
+			}
+			return false;
+		}
+	};
 
 	@Parameter(defaultValue = "${project}", required = true, readonly = true)
 	private MavenProject project;
@@ -169,7 +211,7 @@ public class BenchmarkMojo extends AbstractMojo {
 		if (isNullOrEmpty(allocationAgentJar)) {
 			Optional allocation = Iterables.tryFind(project.getArtifacts(), ALLOCATION_PREDICATE);
 			if (!allocation.isPresent()) {
-				throw dependencyNotFound(ALLOCATION_GROUP_ID, ALLOCATION_ARTIFACT_ID);
+				throw new IllegalArgumentException("Can't find allocation agent jar on the classpath");
 			}
 			Artifact a = (Artifact) allocation.get();
 			allocationAgentJar = a.getFile().getAbsolutePath();
@@ -276,24 +318,6 @@ public class BenchmarkMojo extends AbstractMojo {
 			}
 		}
 		return options.toArray(new String[options.size()]);
-	}
-
-	private static Predicate<Object> artifactPredicate(final String groupId, final String artifactId) {
-		return new Predicate<Object>() {
-			@Override
-			public boolean apply(@Nullable Object o) {
-				if (o instanceof Artifact) {
-					Artifact a = (Artifact) o;
-					if ((Artifact.SCOPE_COMPILE.equals(a.getScope()) || Artifact.SCOPE_RUNTIME.equals(a
-							.getScope()))
-							&& a.getGroupId().equals(groupId)
-							&& a.getArtifactId().equals(artifactId)) {
-						return true;
-					}
-				}
-				return false;
-			}
-		};
 	}
 
 	private static MojoExecutionException bug(Exception e) throws MojoExecutionException {
