@@ -1,7 +1,39 @@
+/*
+ * Copyright (C) 2013 Anton Tychyna <anton.tychina@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.google.caliper.maven;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
+import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.project.MavenProject;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.JarURLConnection;
@@ -14,25 +46,7 @@ import java.util.Properties;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
-import javax.annotation.Nullable;
-
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
-import org.apache.maven.plugins.annotations.Mojo;
-import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.apache.maven.project.MavenProject;
-
-import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import static com.google.common.base.Strings.isNullOrEmpty;
 
 /**
  * Run Caliper benchmarks.
@@ -89,60 +103,114 @@ public class BenchmarkMojo extends AbstractMojo {
 		}
 	};
 
-	@Parameter(defaultValue = "${project}", required = true, readonly = true)
+	@Component
 	private MavenProject project;
 
+	/**
+	 * Where to look for compiled benchmark classes.
+	 */
 	@Parameter(defaultValue = "${project.build.outputDirectory}")
 	protected File benchmarkClassesDirectory;
 
+	/**
+	 * Maximum length of time allowed for a single trial. Use 0 to allow trials to run indefinitely.
+	 */
 	@Parameter(property = "timeLimit")
 	protected String timeLimit;
 
+	/**
+	 * Instead of measuring, execute a single rep for each scenario.
+	 */
 	@Parameter(property = "dryRun")
 	protected boolean dryRun;
 
+	/**
+	 * Fail build if benchmark throws an exception.
+	 */
 	@Parameter(property = "failBuild")
 	protected boolean failBuild;
 
+	/**
+	 * Number of independent trials to peform per benchmark scenario.
+	 */
 	@Parameter(property = "trials")
 	protected Integer trials;
 
+	/**
+	 * List of measuring instruments to use.
+	 */
 	@Parameter(property = "instruments")
 	protected List<String> instruments;
 
+	/**
+	 * A user-friendly string used to identify the run.
+	 */
 	@Parameter(property = "runName")
 	protected String runName;
 
+	/**
+	 * In addition to normal console output, display a raw feed of very detailed information.
+	 */
 	@Parameter(property = "verbose")
 	protected boolean verbose;
 
+	/**
+	 * Location of Caliper's configuration file.
+	 */
 	@Parameter(property = "caliperConfigFile")
 	protected String caliperConfigFile;
 
+	/**
+	 * Location of Caliper's configuration and data directory.
+	 */
 	@Parameter(property = "caliperDirectory")
 	protected String caliperDirectory;
 
+	/**
+	 * Print the effective configuration that will be used by Caliper.
+	 */
 	@Parameter(property = "printConfig")
 	protected boolean printConfig;
 
+	/**
+	 * List of VMs to test on.
+	 */
 	@Parameter(property = "vms")
 	protected List<String> vms;
 
+	/**
+	 * Specifies a value for any property that could otherwise be specified in $HOME/.caliper/config.properties.
+	 */
 	@Parameter
 	protected Map<String, String> properties;
 
+	/**
+	 * Specifies the values to inject into the 'param' field of the benchmark.
+	 */
 	@Parameter
 	protected Map<String, String> params;
 
+	/**
+	 * Benchmarks to include in this run. By default all classes that begin or end with Benchmark are included.
+	 */
 	@Parameter(property = "includes")
 	protected List<String> includes;
 
+	/**
+	 * Benchmarks to exclude from this run.
+	 */
 	@Parameter(property = "excludes")
 	protected List<String> excludes;
 
+	/**
+	 * Run single benchmark specified by regexp.
+	 */
 	@Parameter(property = "benchmark")
 	protected String benchmark;
 
+	/**
+	 * Java agent for allocation instrument. Plugin will look for agent on a classpath if not defined.
+	 */
 	@Parameter(property = "allocationAgentJar")
 	private String allocationAgentJar;
 
